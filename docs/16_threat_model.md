@@ -1,0 +1,12 @@
+# STRIDE Threat Model
+
+This document analyzes the security of the system using the Microsoft STRIDE methodology.
+
+| Threat Category | Description | Threat Scenario | Likelihood | Impact | Mitigation | Residual Risk |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **S**poofing | Forging an identity | An attacker guesses a setter's password to access the question pool. | Low | High | **MFA** enforcement. Passwords alone are insufficient. Supabase Auth rate limits login attempts. | Low. A highly targeted phishing attack capturing both password and MFA token in real-time. |
+| **T**ampering | Modifying data in transit or at rest | A malicious DBA modifies the compiled PDF to include easier questions before the exam. | Low | Critical | **SHA-256 Hashing** and **Ed25519 Digital Signatures**. The signature will fail verification if the PDF is altered by a single byte. | Low. Requires the attacker to also compromise the isolated Crypto Engine's signing key. |
+| **R**epudiation | Denying performing an action | A key holder approves the release of the paper and later claims they were framed. | Low | Medium | **Immutable Audit Logs**. Every key share submission is logged with timestamp, IP address, and user ID. DB triggers prevent log deletion. | Low. Non-repudiation is cryptographically guaranteed by the JWT signature trail. |
+| **I**nformation Disclosure | Unauthorized access to data | The cloud storage bucket containing the final papers is made public by accident. | Medium | Critical | **AES-256-GCM Encryption** and **Shamir's Secret Sharing**. The leaked PDFs are useless ciphertext without the threshold of keys. | Low. Only vulnerable if the threshold of key holders collude *and* the bucket is exposed. |
+| **D**enial of Service | Disrupting system availability | A botnet floods the API layer, preventing legitimate exam centres from downloading the paper on time. | Medium | High | **Cloud Infrastructure**. Supabase and Kong Gateway provide rate limiting and basic DDoS protection. Auto-scaling API servers. | Medium. A massive DDoS at T-30 minutes could delay the exam. |
+| **E**levation of Privilege | Gaining unauthorized permissions | An authenticated 'Setter' exploits a bug in the API to access the 'Compile Paper' endpoint. | Low | Critical | **Row Level Security (RLS)** in PostgreSQL and **RBAC** middleware in FastAPI explicitly check the JWT `role` claim before granting access. | Low. Zero-day vulnerability in PostgreSQL RLS or Supabase Auth. |
