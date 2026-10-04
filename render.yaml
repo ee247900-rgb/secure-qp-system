@@ -1,0 +1,34 @@
+services:
+  # Backend Service (FastAPI)
+  - type: web
+    name: secure-qp-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    rootDir: backend
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Frontend Service (React/Vite)
+  - type: web
+    name: secure-qp-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    rootDir: frontend
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: secure-qp-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
