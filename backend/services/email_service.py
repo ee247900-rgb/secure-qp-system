@@ -13,23 +13,38 @@ SMTP_USER = os.getenv("SMTP_USER", settings.SMTP_USER if hasattr(settings, "SMTP
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", settings.SMTP_PASSWORD if hasattr(settings, "SMTP_PASSWORD") else "")
 SENDER_NAME = "Secure QP System Auth"
 
+import socket
+import ssl
+
 def send_smtp_email(to_email: str, subject: str, html_content: str, text_content: str = None) -> dict:
     """
-    Directly send email via Gmail / custom SMTP.
+    Directly send email via Gmail / custom SMTP with IPv4 enforcement & fallback.
     Returns dict with status, success boolean, and detailed diagnostics.
     """
-    if not SMTP_PASSWORD:
+    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    smtp_user = os.getenv("SMTP_USER", settings.SMTP_USER if hasattr(settings, "SMTP_USER") else "ee247900@gmail.com")
+    smtp_password = os.getenv("SMTP_PASSWORD", settings.SMTP_PASSWORD if hasattr(settings, "SMTP_PASSWORD") else "")
+
+    if not smtp_password:
         logger.warning("SMTP_PASSWORD is not configured in backend environment or config.py.")
         return {
             "success": False,
             "error": "SMTP_PASSWORD not configured. Please set SMTP_PASSWORD in backend/.env with your 16-character Google App Password.",
-            "smtp_user": SMTP_USER
+            "smtp_user": smtp_user
         }
+
+    clean_password = smtp_password.replace(" ", "").strip()
+
+    # Enforce IPv4 DNS resolution for Windows compatibility
+    old_getaddrinfo = socket.getaddrinfo
+    def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+        return old_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"{SENDER_NAME} <{SMTP_USER}>"
+        msg["From"] = f"{SENDER_NAME} <{smtp_user}>"
         msg["To"] = to_email
 
         if text_content:
@@ -39,29 +54,45 @@ def send_smtp_email(to_email: str, subject: str, html_content: str, text_content
         part2 = MIMEText(html_content, "html")
         msg.attach(part2)
 
-        # Connect with TLS
-        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15)
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(SMTP_USER, SMTP_PASSWORD.replace(" ", ""))
-        server.sendmail(SMTP_USER, [to_email], msg.as_string())
-        server.quit()
+        # Apply IPv4 patch
+        socket.getaddrinfo = getaddrinfo_ipv4
 
-        logger.info(f"Email successfully sent to {to_email} via SMTP [{SMTP_USER}]")
+        # Connect via TLS (port 587) or SSL (port 465)
+        try:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+            server.ehlo()
+            context = ssl.create_default_context()
+            server.starttls(context=context)
+            server.ehlo()
+            server.login(smtp_user, clean_password)
+            server.sendmail(smtp_user, [to_email], msg.as_string())
+            server.quit()
+        except smtplib.SMTPAuthenticationError:
+            raise
+        except Exception as primary_err:
+            # Fallback to SSL (port 465)
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(smtp_host, 465, context=context, timeout=15)
+            server.login(smtp_user, clean_password)
+            server.sendmail(smtp_user, [to_email], msg.as_string())
+            server.quit()
+
+        logger.info(f"Email successfully sent to {to_email} via SMTP [{smtp_user}]")
         return {
             "success": True,
             "message": f"Email successfully dispatched to {to_email}",
-            "smtp_user": SMTP_USER
+            "smtp_user": smtp_user
         }
-    except smtplib.SMTPAuthenticationError as e:
-        err_msg = f"SMTP Authentication Failed: Check if SMTP_USER is '{SMTP_USER}' and that a 16-character Google App Password (not normal Gmail password) is used."
-        logger.error(f"{err_msg} Error: {e}")
+    except (smtplib.SMTPAuthenticationError, smtplib.SMTPServerDisconnected) as e:
+        err_msg = f"Gmail SMTP Authentication Failed or connection reset (535 Bad Credentials). Ensure 2-Step Verification is enabled on '{smtp_user}' and generate a fresh 16-character App Password at https://myaccount.google.com/apppasswords"
+        logger.error(f"{err_msg} Details: {e}")
         return {"success": False, "error": err_msg, "detail": str(e)}
     except Exception as e:
         err_msg = f"SMTP Transmission Error: {str(e)}"
         logger.error(err_msg)
         return {"success": False, "error": err_msg, "detail": str(e)}
+    finally:
+        socket.getaddrinfo = old_getaddrinfo
 
 def send_otp_email(to_email: str, otp_code: str) -> dict:
     """Send 6-digit MFA OTP code email."""

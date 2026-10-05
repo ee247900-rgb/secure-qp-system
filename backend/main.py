@@ -58,3 +58,7 @@ async def startup_event():
 @app.get("/api/health", tags=["System"])
 async def health_check():
     return {"status": "healthy", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+
+@app.get("/", tags=["System"])
+async def root():
+    return {"message": f"Welcome to the {settings.APP_NAME} API. Access /docs for API documentation."}

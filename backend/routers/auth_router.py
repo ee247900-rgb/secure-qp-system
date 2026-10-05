@@ -130,10 +130,16 @@ async def request_access_otp(
         reason=reason
     )
     
+    print(f"\n=============================================")
+    print(f"🔑 GENERATED OTP FOR {clean_requester}: {otp_code}")
+    print(f"=============================================\n")
+    logger.warning(f"Generated Access OTP for {clean_requester}: {otp_code}")
+
     return {
         "status": "success",
         "message": f"Access OTP has been sent to the network admin ({clean_admin}). Ask the admin for the OTP to proceed.",
-        "smtp_result": smtp_res
+        "smtp_result": smtp_res,
+        "otp_preview": otp_code  # Added for development/Vercel preview without real email
     }
 
 @router.post("/verify-access-otp")

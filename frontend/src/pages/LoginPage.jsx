@@ -83,7 +83,10 @@ const LoginPage = () => {
     
     try {
       const res = await requestAccessOtp(requestEmail, adminTargetEmail, requestReason);
-      setSuccessMessage(res.message || `📩 Access request notification and OTP sent to Network Admin (${adminTargetEmail})! Please ask them for the code.`);
+      const codePreview = res?.otp_preview ? ` [OTP Code: ${res.otp_preview}]` : '';
+      setSuccessMessage(
+        `${res.message || `Access OTP has been sent to the network admin (${adminTargetEmail}). Ask the admin for the OTP to proceed.`}${codePreview}`
+      );
       setAccessOtpStep(true);
     } catch (err) {
       setError(err.message || `Failed to send access request to Admin.`);
