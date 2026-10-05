@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../config/supabase';
 
+import { API_BASE } from '../config/api';
+
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,8 +21,7 @@ export const useApi = () => {
     setError(null);
     try {
       const headers = await getHeaders();
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const url = `${apiUrl}${path}`;
+      const url = `${API_BASE}${path}`;
       
       const response = await fetch(url, {
         ...options,

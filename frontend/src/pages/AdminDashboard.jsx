@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE } from '../config/api';
 import StatCard from '../components/common/StatCard';
 import StatusBadge from '../components/common/StatusBadge';
 import Modal from '../components/common/Modal';
@@ -153,7 +154,7 @@ const AdminDashboard = () => {
 
     // 2. Dispatch real email invitation via backend
     try {
-      await fetch('http://localhost:8000/api/auth/send-invitations', {
+      await fetch(`${API_BASE}/api/auth/send-invitations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

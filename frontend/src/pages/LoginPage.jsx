@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE } from '../config/api';
 import { 
   ShieldAlert, Lock, Globe, UserCheck, Mail, Send, 
   Key, Check, Sparkles, LogIn, KeyRound, AlertCircle
@@ -140,7 +141,7 @@ const LoginPage = () => {
 
       if (membersList.length > 0) {
         try {
-          await fetch('http://localhost:8000/api/auth/send-invitations', {
+          await fetch(`${API_BASE}/api/auth/send-invitations`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

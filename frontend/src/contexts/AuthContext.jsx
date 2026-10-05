@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../config/supabase';
+import { API_BASE } from '../config/api';
 
 const AuthContext = createContext();
 
@@ -133,7 +134,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       // 1. Dispatch via Backend Direct SMTP endpoint with the EXACT same code
-      const response = await fetch('http://localhost:8000/api/auth/send-otp', {
+      const response = await fetch(`${API_BASE}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: cleanEmail, otp_code: code })
@@ -261,7 +262,7 @@ export const AuthProvider = ({ children }) => {
     const cleanAdmin = adminEmail.trim().toLowerCase();
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/request-access-otp', {
+      const response = await fetch(`${API_BASE}/api/auth/request-access-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -300,7 +301,7 @@ export const AuthProvider = ({ children }) => {
     let data = {};
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/verify-access-otp', {
+      const response = await fetch(`${API_BASE}/api/auth/verify-access-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
